@@ -6,7 +6,6 @@
 	let { data } = $props();
 
 	let youtubePlayer: YT.Player | null = $state(null);
-	let playerReady = $state(false);
 
 	let parsedLines: ParsedDanmakuLine[] = $derived(
 		data.lines.map(l => ({
@@ -29,24 +28,23 @@
 		}))
 	);
 
-	function onYouTubeReady() {
-		playerReady = true;
-	}
-
 	$effect(() => {
-		if (!playerReady) return;
-
 		const tag = document.createElement('script');
 		tag.src = 'https://www.youtube.com/iframe_api';
-		const first = document.getElementsByTagName('script')[0];
-		first?.parentNode?.insertBefore(tag, first);
+		document.head.appendChild(tag);
 
-		const prev = (window as any).onYouTubeIframeAPIReady;
 		(window as any).onYouTubeIframeAPIReady = () => {
-			if (prev) prev();
-			youtubePlayer = new (window as any).YT.Player('youtube-player', {
-				events: { onReady: () => {} },
+			const player = new (window as any).YT.Player('youtube-player', {
+				videoId: data.vod.youtubeId,
+				events: {
+					onReady: () => { youtubePlayer = player; },
+				},
 			});
+		};
+
+		return () => {
+			delete (window as any).onYouTubeIframeAPIReady;
+			if (youtubePlayer) youtubePlayer.destroy();
 		};
 	});
 </script>
@@ -59,16 +57,10 @@
 	<h1 class="text-xl font-bold text-white">{data.vod.title}</h1>
 
 	<div class="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden">
-		<iframe
+		<div
 			id="youtube-player"
 			class="absolute inset-0 w-full h-full"
-			src="https://www.youtube.com/embed/{data.vod.youtubeId}?enablejsapi=1&controls=1"
-			title={data.vod.title}
-			frameborder="0"
-			allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-			allowfullscreen
-			onload={onYouTubeReady}
-		></iframe>
+		></div>
 
 		<DanmakuOverlay
 			lines={parsedLines}
@@ -112,6 +104,11 @@
 					Source: {data.activeUpload.sourceLabel}
 					{#if data.activeUpload.sourceNote} — {data.activeUpload.sourceNote}{/if}
 				</div>
+			{/if}
+			{#if parsedLines.length === 0}
+				<p class="text-xs text-yellow-400">
+					No danmaku lines imported yet. Import an ASS file from the admin panel.
+				</p>
 			{/if}
 		</div>
 	{:else}

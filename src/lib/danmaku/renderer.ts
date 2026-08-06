@@ -116,6 +116,8 @@ export function createDanmakuRenderer(
 			const anchor = ANCHOR_MAP[line.anchor] ?? ANCHOR_MAP[2];
 			const x = line.posX * w;
 			const y = line.posY * h;
+			const tx = anchor.x === '50%' ? '-50%' : anchor.x === '100%' ? '-100%' : '0';
+			const ty = anchor.y === '50%' ? '-50%' : anchor.y === '100%' ? '-100%' : '0';
 
 			return {
 				line,
@@ -124,7 +126,7 @@ export function createDanmakuRenderer(
 				transFontSize: `${transFs}px`,
 				left: `${x}px`,
 				top: `${y}px`,
-				transform: `translate(-${anchor.x}, -${anchor.y})`,
+				transform: `translate(${tx}, ${ty})`,
 			};
 		}
 	}

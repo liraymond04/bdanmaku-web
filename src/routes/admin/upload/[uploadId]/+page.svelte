@@ -13,7 +13,6 @@
 	let searchFilter = $state('');
 	let showUntranslated = $state(false);
 	let youtubePlayer: YT.Player | null = $state(null);
-	let playerReady = $state(false);
 
 	let editingOffset = $state(false);
 	let offsetInput = $state(0);
@@ -108,10 +107,6 @@
 		}
 	}
 
-	function onYouTubeReady() {
-		playerReady = true;
-	}
-
 	function formatMs(ms: number): string {
 		const s = Math.floor(ms / 1000);
 		const m = Math.floor(s / 60);
@@ -121,19 +116,22 @@
 	}
 
 	$effect(() => {
-		if (!playerReady) return;
-
 		const tag = document.createElement('script');
 		tag.src = 'https://www.youtube.com/iframe_api';
-		const first = document.getElementsByTagName('script')[0];
-		first?.parentNode?.insertBefore(tag, first);
+		document.head.appendChild(tag);
 
-		const prev = (window as any).onYouTubeIframeAPIReady;
 		(window as any).onYouTubeIframeAPIReady = () => {
-			if (prev) prev();
-			youtubePlayer = new (window as any).YT.Player('youtube-player-admin', {
-				events: { onReady: () => {} },
+			const player = new (window as any).YT.Player('youtube-player-admin', {
+				videoId: data.vod.youtubeId,
+				events: {
+					onReady: () => { youtubePlayer = player; },
+				},
 			});
+		};
+
+		return () => {
+			delete (window as any).onYouTubeIframeAPIReady;
+			if (youtubePlayer) youtubePlayer.destroy();
 		};
 	});
 </script>
@@ -260,16 +258,10 @@
 		<div class="flex gap-4" style="height: calc(100vh - 180px);">
 			<div class="w-1/2 flex flex-col space-y-2">
 				<div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
-					<iframe
+					<div
 						id="youtube-player-admin"
 						class="absolute inset-0 w-full h-full"
-						src="https://www.youtube.com/embed/{data.vod.youtubeId}?enablejsapi=1&controls=1"
-						title={data.vod.title}
-						frameborder="0"
-						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-						allowfullscreen
-						onload={onYouTubeReady}
-					></iframe>
+					></div>
 
 					<DanmakuOverlay
 						lines={parsedLines}
