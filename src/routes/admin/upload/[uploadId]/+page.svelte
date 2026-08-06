@@ -98,6 +98,7 @@
 		saving = false;
 	}
 
+	let notePreview = $state(false);
 	let clickTimer: ReturnType<typeof setTimeout> | null = $state(null);
 
 	function handleLineClick(line: ParsedDanmakuLine) {
@@ -303,8 +304,8 @@
 		</div>
 	{:else}
 		<div class="flex gap-4" style="height: calc(100vh - 180px);">
-			<div class="w-1/2 flex flex-col space-y-2">
-				<div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+			<div class="w-1/2 flex flex-col space-y-2 overflow-y-auto">
+				<div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden shrink-0">
 					<div
 						id="youtube-player-admin"
 						class="absolute inset-0 w-full h-full"
@@ -320,7 +321,7 @@
 					/>
 				</div>
 
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-2 shrink-0">
 					{#if importing}
 						<div class="text-xs text-blue-400 flex items-center gap-1">
 							<span class="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
@@ -346,6 +347,71 @@
 						class="text-xs text-gray-400 file:mr-2 file:rounded file:bg-gray-700 file:border-0 file:px-2 file:py-1 file:text-xs file:text-white file:cursor-pointer"
 					/>
 				</div>
+
+				{#if selectedLineId !== null}
+					{@const selLine = parsedLines.find(l => l.index === selectedLineId)}
+					<div class="rounded-lg border border-gray-700 bg-gray-800 p-3 space-y-3 shrink-0">
+						<div class="flex items-center justify-between">
+							<span class="text-xs text-white">
+								Editing <span class="text-gray-400">{selLine?.originalText ?? ''}</span>
+								<span class="text-gray-500"> at {selLine ? formatMs(selLine.startMs) : ''}</span>
+							</span>
+							<div class="flex gap-2">
+								<button
+									onclick={saveLine}
+									disabled={saving}
+									class="cursor-pointer rounded bg-green-600 px-2 py-0.5 text-xs text-white hover:bg-green-700 disabled:opacity-50"
+								>
+									{saving ? 'Saving...' : 'Save'}
+								</button>
+								<button
+									onclick={() => { selectedLineId = null; notePreview = false; }}
+									class="cursor-pointer rounded bg-gray-600 px-2 py-0.5 text-xs text-white hover:bg-gray-500"
+								>
+									✕
+								</button>
+							</div>
+						</div>
+
+						<label class="block">
+							<span class="text-xs text-gray-400">Translation</span>
+							<textarea
+								bind:value={editedText}
+								rows={2}
+								class="mt-1 w-full rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-sm text-white resize-none"
+								placeholder="Edit translation..."
+							></textarea>
+						</label>
+
+						<div>
+							<div class="flex items-center justify-between mb-1">
+								<span class="text-xs text-gray-400">Note</span>
+								<button
+									class="cursor-pointer text-xs text-blue-400 hover:text-blue-300"
+									onclick={() => notePreview = !notePreview}
+								>
+									{notePreview ? 'Edit' : 'Preview'}
+								</button>
+							</div>
+							{#if notePreview}
+								<div class="rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-xs text-gray-300 min-h-[3rem] prose prose-invert prose-xs max-w-none">
+									{#if noteText}
+										{@html noteText.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/`(.+?)`/g, '<code class="bg-gray-600 px-1 rounded text-xs">$1</code>').replace(/\n/g, '<br>')}
+									{:else}
+										<span class="text-gray-500 italic">Nothing to preview</span>
+									{/if}
+								</div>
+							{:else}
+								<textarea
+									bind:value={noteText}
+									rows={3}
+									class="w-full rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-xs text-white resize-none font-mono"
+									placeholder="Add context or translation notes (markdown)..."
+								></textarea>
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<div class="w-1/2 flex flex-col space-y-2 overflow-hidden">
@@ -399,52 +465,5 @@
 				</div>
 			</div>
 		</div>
-
-		{#if selectedLineId !== null}
-			{@const selLine = parsedLines.find(l => l.index === selectedLineId)}
-			<div class="rounded-lg border border-gray-700 bg-gray-800 p-3 space-y-2">
-				<div class="flex items-center justify-between">
-					<span class="text-sm text-white">
-						Editing: <span class="text-gray-400">{selLine?.originalText ?? ''}</span>
-						at {selLine ? formatMs(selLine.startMs) : ''}
-					</span>
-					<div class="flex gap-2">
-						<button
-							onclick={saveLine}
-							disabled={saving}
-							class="rounded bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700 disabled:opacity-50"
-						>
-							{saving ? 'Saving...' : 'Save'}
-						</button>
-						<button
-							onclick={() => selectedLineId = null}
-							class="rounded bg-gray-600 px-3 py-1 text-xs text-white hover:bg-gray-500"
-						>
-							Close
-						</button>
-					</div>
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<label class="block">
-						<span class="text-xs text-gray-400">Translation</span>
-						<input
-							type="text"
-							bind:value={editedText}
-							class="mt-1 w-full rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-sm text-white"
-							placeholder="Edit translation..."
-						/>
-					</label>
-					<label class="block">
-						<span class="text-xs text-gray-400">Note (markdown)</span>
-						<textarea
-							bind:value={noteText}
-							rows={2}
-							class="mt-1 w-full rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-sm text-white resize-none"
-							placeholder="Translation note..."
-						></textarea>
-					</label>
-				</div>
-			</div>
-		{/if}
 	{/if}
 </div>
