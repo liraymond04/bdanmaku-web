@@ -38,7 +38,7 @@
 					class="mt-1 w-full rounded bg-gray-700 border border-gray-600 px-3 py-2 text-sm text-white"
 				/>
 			</label>
-			<button type="submit" class="w-full rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
+			<button type="submit" class="cursor-pointer w-full rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
 				Login
 			</button>
 		</form>

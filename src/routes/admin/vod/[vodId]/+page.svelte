@@ -2,31 +2,76 @@
 	import type { PageServerData } from './$types';
 
 	let { data } = $props();
-	let { vod, uploads } = data;
+	let editingVod = $state(false);
 </script>
 
 <svelte:head>
-	<title>Manage: {vod.title} — Admin</title>
+	<title>Manage: {data.vod.title} — Admin</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-bold text-white">{vod.title}</h1>
-			<p class="text-sm text-gray-400">youtube.com/watch?v={vod.youtubeId}</p>
+			<h1 class="text-2xl font-bold text-white">{data.vod.title}</h1>
+			<p class="text-sm text-gray-400">youtube.com/watch?v={data.vod.youtubeId}</p>
 		</div>
-		<a href="/admin" class="text-sm text-blue-400 hover:text-blue-300">← Dashboard</a>
+		<div class="flex gap-2">
+			<button
+				onclick={() => editingVod = !editingVod}
+				class="text-sm text-gray-400 hover:cursor-pointer hover:text-white transition"
+			>
+				{editingVod ? 'Cancel' : 'Edit VOD'}
+			</button>
+			<a href="/admin" class="text-sm text-blue-400 hover:text-blue-300">← Dashboard</a>
+		</div>
 	</div>
+
+	{#if editingVod}
+		<form method="POST" action="?/editVod" onsubmit={() => editingVod = false} class="rounded-lg border border-gray-700 bg-gray-800 p-4 space-y-3">
+			<h3 class="text-sm font-medium text-white">Edit VOD</h3>
+			<div class="grid grid-cols-2 gap-3">
+				<label class="block">
+					<span class="text-xs text-gray-400">Title</span>
+					<input
+						type="text"
+						name="title"
+						value={data.vod.title}
+						required
+						class="mt-1 w-full rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-sm text-white"
+					/>
+				</label>
+				<label class="block">
+					<span class="text-xs text-gray-400">YouTube URL</span>
+					<input
+						type="url"
+						name="youtubeUrl"
+						value={data.vod.youtubeUrl}
+						required
+						class="mt-1 w-full rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-sm text-white"
+					/>
+				</label>
+			</div>
+			<button type="submit" class="cursor-pointer rounded bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700">
+				Save Changes
+			</button>
+		</form>
+	{/if}
 
 	<div class="space-y-4">
 		<h2 class="text-lg font-semibold text-white">Uploads</h2>
 
-		{#each uploads as upload}
+		{#each data.uploads as upload}
 			<div class="rounded-lg border border-gray-700 bg-gray-800 p-4">
 				<div class="flex items-start justify-between">
 					<div class="space-y-1">
-						<p class="text-white font-medium">{upload.bilibiliBv}</p>
-						<p class="text-xs text-gray-500">{upload.bilibiliUrl}</p>
+						<a
+							href={upload.bilibiliUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-blue-400 hover:text-blue-300 hover:underline"
+						>
+							{upload.bilibiliBv} ↗
+						</a>
 						<div class="flex gap-4 text-xs text-gray-400 mt-2">
 							<span>Offset: {upload.timingOffsetMs}ms</span>
 							<span>Lines: {upload.lineCount}</span>
@@ -57,7 +102,7 @@
 			</div>
 		{/each}
 
-		{#if uploads.length === 0}
+		{#if data.uploads.length === 0}
 			<p class="text-gray-400">No uploads yet.</p>
 		{/if}
 	</div>

@@ -4,19 +4,30 @@
 	import DanmakuOverlay from '$lib/components/DanmakuOverlay.svelte';
 
 	let { data, form } = $props();
-	let { vod, upload, lines } = data;
 
 	let selectedLineId = $state<number | null>(null);
 	let editedText = $state('');
 	let noteText = $state('');
 	let saving = $state(false);
+	let importing = $state(false);
 	let searchFilter = $state('');
 	let showUntranslated = $state(false);
 	let youtubePlayer: YT.Player | null = $state(null);
 	let playerReady = $state(false);
 
+	let editingOffset = $state(false);
+	let offsetInput = $state(0);
+	let effectiveOffset = $state(0);
+
+	$effect(() => {
+		effectiveOffset = data.upload.timingOffsetMs ?? 0;
+		offsetInput = data.upload.timingOffsetMs ?? 0;
+	});
+
+
+
 	const parsedLines: ParsedDanmakuLine[] = $derived(
-		lines.map(l => ({
+		data.lines.map(l => ({
 			layer: l.layer,
 			startMs: l.startMs,
 			endMs: l.endMs,
@@ -46,7 +57,7 @@
 
 	function seekTo(line: ParsedDanmakuLine) {
 		if (!youtubePlayer) return;
-		const offsetMs = upload.timingOffsetMs ?? 0;
+		const offsetMs = effectiveOffset;
 		const seekTime = (line.startMs - offsetMs) / 1000;
 		youtubePlayer.seekTo(Math.max(0, seekTime), true);
 		selectLine(line);
@@ -54,7 +65,7 @@
 
 	function selectLine(line: ParsedDanmakuLine) {
 		selectedLineId = line.startMs;
-		const dbLine = lines.find(l => l.startMs === line.startMs && l.originalText === line.originalText);
+		const dbLine = data.lines.find(l => l.startMs === line.startMs && l.originalText === line.originalText);
 		editedText = dbLine?.editedText ?? dbLine?.translatedText ?? '';
 		noteText = dbLine?.noteMarkdown ?? dbLine?.note ?? '';
 	}
@@ -66,7 +77,7 @@
 
 	async function saveLine() {
 		if (selectedLineId === null) return;
-		const dbLine = lines.find(l => l.startMs === selectedLineId);
+		const dbLine = data.lines.find(l => l.startMs === selectedLineId);
 		if (!dbLine) return;
 
 		saving = true;
@@ -110,21 +121,72 @@
 </script>
 
 <svelte:head>
-	<title>Edit: {vod.title} — Admin</title>
+	<title>Edit: {data.vod.title} — Admin</title>
 </svelte:head>
 
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-xl font-bold text-white">{vod.title}</h1>
-			<p class="text-sm text-gray-400">Upload: {upload.bilibiliBv} · Offset: {upload.timingOffsetMs}ms</p>
+			<h1 class="text-xl font-bold text-white">{data.vod.title}</h1>
+			<p class="text-sm text-gray-400">
+				Upload:
+				<a href={data.upload.bilibiliUrl} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline">
+					{data.upload.bilibiliBv} ↗
+				</a>
+			</p>
+			<div class="flex items-center gap-2 text-sm text-gray-400 mt-0.5">
+				<span>Offset:</span>
+				{#if editingOffset}
+					<div class="flex items-center gap-1">
+						<input
+							type="number"
+							bind:value={offsetInput}
+							class="w-20 rounded bg-gray-700 border border-gray-600 px-1.5 py-0.5 text-xs text-white"
+						/>
+						<span class="text-xs">ms</span>
+						<button
+							type="button"
+							class="cursor-pointer rounded bg-green-600 px-1.5 py-0.5 text-xs text-white hover:bg-green-700"
+							onclick={async () => {
+								await fetch(`/api/upload/${data.upload.id}/set-offset`, {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ offsetMs: offsetInput }),
+								});
+								effectiveOffset = offsetInput;
+								editingOffset = false;
+							}}
+						>Save</button>
+						<button type="button" class="cursor-pointer rounded bg-gray-600 px-1.5 py-0.5 text-xs text-white hover:bg-gray-500" onclick={() => { editingOffset = false; offsetInput = effectiveOffset; }}>
+							✕
+						</button>
+					</div>
+				{:else}
+					<button class="cursor-pointer text-gray-400 hover:text-white" onclick={() => { editingOffset = true; offsetInput = effectiveOffset; }}>
+						{effectiveOffset}ms
+					</button>
+				{/if}
+				{#if selectedLineId !== null && youtubePlayer}
+					<button
+						type="button"
+						class="cursor-pointer text-xs text-blue-400 hover:text-blue-300"
+						onclick={() => {
+							const videoMs = (youtubePlayer!).getCurrentTime() * 1000;
+							offsetInput = Math.round(selectedLineId! - videoMs);
+							if (!editingOffset) editingOffset = true;
+						}}
+					>
+						sync selected line to player
+					</button>
+				{/if}
+			</div>
 		</div>
 		<div class="flex gap-2">
-			<a href="/admin/vod/{vod.id}" class="text-sm text-blue-400 hover:text-blue-300">← Uploads</a>
+			<a href="/admin/vod/{data.vod.id}" class="text-sm text-blue-400 hover:text-blue-300">← Uploads</a>
 		</div>
 	</div>
 
-	{#if lines.length === 0}
+	{#if data.lines.length === 0}
 		<div class="rounded-lg border border-gray-700 bg-gray-800 p-8 text-center space-y-4">
 			<h2 class="text-lg font-semibold text-white">No danmaku lines imported yet</h2>
 			<p class="text-sm text-gray-400">
@@ -135,22 +197,41 @@
 				<p class="text-sm text-red-400">{form.error}</p>
 			{/if}
 			{#if form?.success}
-				<p class="text-sm text-green-400">
-					Imported {form.inserted} new lines{form.updated ? `, updated ${form.updated}` : ''}.
-					<a href="." class="underline">Reload</a>
-				</p>
+				<div class="text-sm text-green-400">
+					<p>{form.inserted} new lines imported, {form.updated} updated out of {form.total} total.</p>
+					<div class="mt-2 w-full bg-gray-700 rounded-full h-2">
+						<div class="bg-green-500 h-2 rounded-full" style="width: 100%;"></div>
+					</div>
+					<a href="." class="underline mt-2 inline-block">Reload to view</a>
+				</div>
 			{/if}
 
-			<form method="POST" action="?/importAss" enctype="multipart/form-data" class="flex items-center justify-center gap-2">
+			<form
+				method="POST"
+				action="?/importAss"
+				enctype="multipart/form-data"
+				class="flex items-center justify-center gap-2"
+				onsubmit={() => importing = true}
+			>
 				<input
 					type="file"
 					name="file"
 					accept=".ass"
 					required
+					disabled={importing}
 					class="text-sm text-gray-400 file:mr-2 file:rounded file:bg-gray-700 file:border-0 file:px-3 file:py-1.5 file:text-sm file:text-white"
 				/>
-				<button type="submit" class="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700">
-					Import ASS
+				<button
+					type="submit"
+					disabled={importing}
+					class="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+				>
+					{#if importing}
+						<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1 align-middle"></span>
+						Importing...
+					{:else}
+						Import ASS
+					{/if}
 				</button>
 			</form>
 		</div>
@@ -161,8 +242,8 @@
 					<iframe
 						id="youtube-player-admin"
 						class="absolute inset-0 w-full h-full"
-						src="https://www.youtube.com/embed/{vod.youtubeId}?enablejsapi=1&controls=1"
-						title={vod.title}
+						src="https://www.youtube.com/embed/{data.vod.youtubeId}?enablejsapi=1&controls=1"
+						title={data.vod.title}
 						frameborder="0"
 						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
 						allowfullscreen
@@ -172,21 +253,26 @@
 					<DanmakuOverlay
 						lines={parsedLines}
 						{youtubePlayer}
-						offsetMs={upload.timingOffsetMs ?? 0}
+						offsetMs={effectiveOffset}
 						adminMode={true}
 						onselect={handleOverlaySelect}
 					/>
 				</div>
 
-				<form method="POST" action="?/importAss" enctype="multipart/form-data" class="flex items-center gap-2">
+				<form method="POST" action="?/importAss" enctype="multipart/form-data" class="flex items-center gap-2" onsubmit={() => importing = true}>
 					<input
 						type="file"
 						name="file"
 						accept=".ass"
+						disabled={importing}
 						class="text-xs text-gray-400 file:mr-2 file:rounded file:bg-gray-700 file:border-0 file:px-2 file:py-1 file:text-xs file:text-white"
 					/>
-					<button type="submit" class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700">
-						Re-import ASS
+					<button type="submit" disabled={importing} class="cursor-pointer rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50">
+						{#if importing}
+							Importing...
+						{:else}
+							Re-import ASS
+						{/if}
 					</button>
 				</form>
 			</div>
@@ -203,7 +289,7 @@
 						placeholder="Search..."
 						class="w-40 rounded bg-gray-700 border border-gray-600 px-2 py-1 text-xs text-white"
 					/>
-					<span class="text-gray-500">{filteredLines.length} / {lines.length} lines</span>
+					<span class="text-gray-500">{filteredLines.length} / {data.lines.length} lines</span>
 				</div>
 
 				<div class="flex-1 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800">
@@ -217,7 +303,7 @@
 						</thead>
 						<tbody>
 							{#each filteredLines as line (line.startMs + '-' + line.originalText)}
-								{@const dbLine = lines.find(l => l.startMs === line.startMs && l.originalText === line.originalText)}
+								{@const dbLine = data.lines.find(l => l.startMs === line.startMs && l.originalText === line.originalText)}
 								<tr
 									class="border-b border-gray-700 hover:bg-gray-700 cursor-pointer"
 									class:bg-gray-700={selectedLineId === line.startMs}

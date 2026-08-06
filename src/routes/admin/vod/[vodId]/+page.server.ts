@@ -12,7 +12,16 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const uploads = await db
 		.select({
-			...schema.uploads,
+			id: schema.uploads.id,
+			vodId: schema.uploads.vodId,
+			bilibiliUrl: schema.uploads.bilibiliUrl,
+			bilibiliBv: schema.uploads.bilibiliBv,
+			timingOffsetMs: schema.uploads.timingOffsetMs,
+			status: schema.uploads.status,
+			sourceLabel: schema.uploads.sourceLabel,
+			sourceNote: schema.uploads.sourceNote,
+			createdAt: schema.uploads.createdAt,
+			updatedAt: schema.uploads.updatedAt,
 			lineCount: sql<number>`(SELECT count(*) FROM ${schema.danmakuLines} WHERE ${schema.danmakuLines.uploadId} = ${schema.uploads.id})`.mapWith(Number),
 		})
 		.from(schema.uploads)
@@ -23,6 +32,22 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions = {
+	editVod: async ({ params, request }) => {
+		const vodId = parseInt(params.vodId);
+		const data = await request.formData();
+		const youtubeUrl = String(data.get('youtubeUrl') || '');
+		const youtubeId = extractYoutubeId(youtubeUrl) || youtubeUrl;
+		await db
+			.update(schema.vods)
+			.set({
+				title: String(data.get('title') || ''),
+				youtubeUrl,
+				youtubeId,
+				updatedAt: new Date().toISOString(),
+			})
+			.where(eq(schema.vods.id, vodId));
+	},
+
 	addUpload: async ({ params, request }) => {
 		const vodId = parseInt(params.vodId);
 		const data = await request.formData();
@@ -65,3 +90,8 @@ export const actions = {
 		await db.delete(schema.uploads).where(eq(schema.uploads.id, uploadId));
 	},
 } satisfies Actions;
+
+function extractYoutubeId(url: string): string | null {
+	const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+	return m ? m[1] : null;
+}

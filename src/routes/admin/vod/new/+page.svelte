@@ -42,7 +42,7 @@
 			/>
 		</label>
 		<div class="flex gap-3">
-			<button type="submit" class="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">
+			<button type="submit" class="cursor-pointer rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">
 				Create VOD
 			</button>
 			<a href="/admin" class="rounded bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-500">

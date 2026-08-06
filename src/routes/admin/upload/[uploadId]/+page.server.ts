@@ -101,4 +101,14 @@ export const actions = {
 
 		return { success: true, inserted, updated, total: parsed.length };
 	},
+
+	setOffset: async ({ params, request }) => {
+		const uploadId = parseInt(params.uploadId);
+		const data = await request.formData();
+		const offset = parseInt(String(data.get('offsetMs') || '0')) || 0;
+		await db
+			.update(schema.uploads)
+			.set({ timingOffsetMs: offset, updatedAt: new Date().toISOString() })
+			.where(eq(schema.uploads.id, uploadId));
+	},
 } satisfies Actions;

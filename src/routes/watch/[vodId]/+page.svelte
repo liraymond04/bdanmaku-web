@@ -2,14 +2,13 @@
 	import type { PageServerData } from './$types';
 	import type { ParsedDanmakuLine } from '$lib/danmaku/ass-parser';
 	import DanmakuOverlay from '$lib/components/DanmakuOverlay.svelte';
-	import { parseAssContent } from '$lib/danmaku/ass-parser';
 
 	let { data } = $props();
 
 	let youtubePlayer: YT.Player | null = $state(null);
 	let playerReady = $state(false);
+
 	let parsedLines: ParsedDanmakuLine[] = $derived(
-		data.assContent ? parseAssContent(data.assContent, 1920, 1080) :
 		data.lines.map(l => ({
 			layer: l.layer,
 			startMs: l.startMs,
@@ -43,9 +42,7 @@
 
 		(window as any).onYouTubeIframeAPIReady = () => {
 			youtubePlayer = new (window as any).YT.Player('youtube-player', {
-				events: {
-					onReady: () => {},
-				},
+				events: { onReady: () => {} },
 			});
 		};
 
@@ -81,23 +78,44 @@
 		/>
 	</div>
 
-	{#if data.uploads.length > 0}
+	{#if data.activeUpload}
 		<div class="flex flex-col gap-2 text-sm text-gray-400">
-			<div class="flex items-center gap-4">
-				<span>Upload: {data.uploads[0].bilibiliBv}</span>
+			<div class="flex items-center gap-4 flex-wrap">
+				{#if data.uploads.length > 1}
+					<div class="flex items-center gap-1">
+						<span class="text-gray-500">Upload:</span>
+						<select
+							class="rounded bg-gray-700 border border-gray-600 px-2 py-0.5 text-xs text-white"
+							onchange={(e) => window.location.search = 'upload=' + (e.target as HTMLSelectElement).value}
+						>
+							{#each data.uploads as u}
+								<option value={u.id} selected={u.id === data.activeUpload?.id}>
+									{u.bilibiliBv}
+								</option>
+							{/each}
+						</select>
+					</div>
+				{:else}
+					<a
+						href={data.activeUpload.bilibiliUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-blue-400 hover:text-blue-300 hover:underline"
+					>
+						{data.activeUpload.bilibiliBv} ↗
+					</a>
+				{/if}
 				<span>Offset: {data.timingOffsetMs}ms</span>
 				<span>{parsedLines.length} danmaku lines</span>
 			</div>
-			{#if data.uploads[0].sourceLabel}
+			{#if data.activeUpload.sourceLabel}
 				<div class="text-xs text-gray-500">
-					Source: {data.uploads[0].sourceLabel}
-					{#if data.uploads[0].sourceNote} — {data.uploads[0].sourceNote}{/if}
+					Source: {data.activeUpload.sourceLabel}
+					{#if data.activeUpload.sourceNote} — {data.activeUpload.sourceNote}{/if}
 				</div>
 			{/if}
 		</div>
-	{/if}
-
-	{#if data.uploads.length === 0}
+	{:else}
 		<p class="text-gray-400">No danmaku uploads linked to this VOD yet.</p>
 	{/if}
 </div>
