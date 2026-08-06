@@ -28,6 +28,7 @@
 
 	const parsedLines: ParsedDanmakuLine[] = $derived(
 		data.lines.map(l => ({
+			index: l.id,
 			layer: l.layer,
 			startMs: l.startMs,
 			endMs: l.endMs,
@@ -55,16 +56,15 @@
 		})
 	);
 
-	function seekTo(line: ParsedDanmakuLine) {
+	function jumpTo(line: ParsedDanmakuLine) {
 		if (!youtubePlayer) return;
-		const offsetMs = effectiveOffset;
-		const seekTime = (line.startMs - offsetMs) / 1000;
+		const seekTime = (line.startMs - effectiveOffset) / 1000;
 		youtubePlayer.seekTo(Math.max(0, seekTime), true);
 		selectLine(line);
 	}
 
 	function selectLine(line: ParsedDanmakuLine) {
-		selectedLineId = line.startMs;
+		selectedLineId = line.index;
 		const dbLine = data.lines.find(l => l.startMs === line.startMs && l.originalText === line.originalText);
 		editedText = dbLine?.editedText ?? dbLine?.translatedText ?? '';
 		noteText = dbLine?.noteMarkdown ?? dbLine?.note ?? '';
@@ -72,12 +72,16 @@
 
 	function handleOverlaySelect(line: ParsedDanmakuLine) {
 		selectLine(line);
-		seekTo(line);
+	}
+
+	function handleOverlayJump(line: ParsedDanmakuLine) {
+		selectLine(line);
+		jumpTo(line);
 	}
 
 	async function saveLine() {
 		if (selectedLineId === null) return;
-		const dbLine = data.lines.find(l => l.startMs === selectedLineId);
+		const dbLine = data.lines.find(l => l.id === selectedLineId);
 		if (!dbLine) return;
 
 		saving = true;
@@ -87,6 +91,21 @@
 			body: JSON.stringify({ editedText: editedText, note: noteText, noteMarkdown: noteText }),
 		});
 		saving = false;
+	}
+
+	let clickTimer: ReturnType<typeof setTimeout> | null = $state(null);
+
+	function handleLineClick(line: ParsedDanmakuLine) {
+		if (clickTimer) {
+			clearTimeout(clickTimer);
+			clickTimer = null;
+			jumpTo(line);
+		} else {
+			clickTimer = setTimeout(() => {
+				clickTimer = null;
+				selectLine(line);
+			}, 250);
+		}
 	}
 
 	function onYouTubeReady() {
@@ -106,16 +125,15 @@
 
 		const tag = document.createElement('script');
 		tag.src = 'https://www.youtube.com/iframe_api';
-		document.getElementsByTagName('script')[0]?.parentNode?.insertBefore(tag, document.getElementsByTagName('script')[0]);
+		const first = document.getElementsByTagName('script')[0];
+		first?.parentNode?.insertBefore(tag, first);
 
+		const prev = (window as any).onYouTubeIframeAPIReady;
 		(window as any).onYouTubeIframeAPIReady = () => {
+			if (prev) prev();
 			youtubePlayer = new (window as any).YT.Player('youtube-player-admin', {
 				events: { onReady: () => {} },
 			});
-		};
-
-		return () => {
-			delete (window as any).onYouTubeIframeAPIReady;
 		};
 	});
 </script>
@@ -167,17 +185,20 @@
 					</button>
 				{/if}
 				{#if selectedLineId !== null && youtubePlayer}
+					{@const selLine = parsedLines.find(l => l.index === selectedLineId)}
+					{#if selLine}
 					<button
 						type="button"
 						class="cursor-pointer text-xs text-blue-400 hover:text-blue-300"
 						onclick={() => {
-							const videoMs = (youtubePlayer!).getCurrentTime() * 1000;
-							offsetInput = Math.round(selectedLineId! - videoMs);
+							const videoMs = youtubePlayer!.getCurrentTime() * 1000;
+							offsetInput = Math.round(selLine.startMs - videoMs);
 							if (!editingOffset) editingOffset = true;
 						}}
 					>
 						sync selected line to player
 					</button>
+					{/if}
 				{/if}
 			</div>
 		</div>
@@ -256,6 +277,7 @@
 						offsetMs={effectiveOffset}
 						adminMode={true}
 						onselect={handleOverlaySelect}
+						onjump={handleOverlayJump}
 					/>
 				</div>
 
@@ -302,12 +324,12 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each filteredLines as line (line.startMs + '-' + line.originalText)}
+							{#each filteredLines as line (line.index)}
 								{@const dbLine = data.lines.find(l => l.startMs === line.startMs && l.originalText === line.originalText)}
 								<tr
 									class="border-b border-gray-700 hover:bg-gray-700 cursor-pointer"
-									class:bg-gray-700={selectedLineId === line.startMs}
-									onclick={() => seekTo(line)}
+								class:bg-gray-700={selectedLineId === line.index}
+								onclick={() => handleLineClick(line)}
 								>
 									<td class="px-2 py-1 text-gray-500 font-mono">
 										{formatMs(line.startMs)}
@@ -330,7 +352,7 @@
 		</div>
 
 		{#if selectedLineId !== null}
-			{@const selLine = parsedLines.find(l => l.startMs === selectedLineId)}
+			{@const selLine = parsedLines.find(l => l.index === selectedLineId)}
 			<div class="rounded-lg border border-gray-700 bg-gray-800 p-3 space-y-2">
 				<div class="flex items-center justify-between">
 					<span class="text-sm text-white">

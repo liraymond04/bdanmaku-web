@@ -10,9 +10,10 @@
 		offsetMs?: number;
 		adminMode?: boolean;
 		onselect?: (line: ParsedDanmakuLine) => void;
+		onjump?: (line: ParsedDanmakuLine) => void;
 	}
 
-	let { lines, youtubePlayer, offsetMs = 0, adminMode = false, onselect }: Props = $props();
+	let { lines, youtubePlayer, offsetMs = 0, adminMode = false, onselect, onjump }: Props = $props();
 
 	let activeLines: ActiveLine[] = $state([]);
 	let containerEl = $state<HTMLDivElement>();
@@ -46,8 +47,8 @@
 
 {#if youtubePlayer}
 	<div bind:this={containerEl} class="absolute inset-0 overflow-hidden pointer-events-none">
-		{#each activeLines as al (al.line.startMs + '-' + al.line.layer)}
-			<DanmakuLine {al} {adminMode} {onselect} />
+		{#each activeLines as al (al.line.index)}
+			<DanmakuLine {al} {adminMode} {onselect} {onjump} />
 		{/each}
 	</div>
 {/if}

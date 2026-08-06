@@ -1,12 +1,16 @@
 import type { ParsedDanmakuLine } from './ass-parser';
 
+const ASS_RES_X = 1920;
+const ASS_RES_Y = 1080;
+
 export interface ActiveLine {
 	line: ParsedDanmakuLine;
 	elapsedFraction: number;
+	fontSize: string;
+	transFontSize: string;
 	left: string;
 	top: string;
 	transform: string;
-	anchorClass: string;
 }
 
 const ANCHOR_MAP: Record<number, { x: string; y: string }> = {
@@ -43,28 +47,38 @@ export function createDanmakuRenderer(
 			return;
 		}
 
-		// Activate new lines
+		const scale = Math.min(w / ASS_RES_X, h / ASS_RES_Y);
+
 		for (const line of lines) {
-			if (now >= line.startMs && now <= line.endMs && !active.has(line.layer * 100000 + line.startMs)) {
-				const key = line.layer * 100000 + line.startMs;
+			if (now >= line.startMs && now <= line.endMs && !active.has(line.index)) {
 				const duration = line.endMs - line.startMs;
 				const elapsed = Math.max(0, now - line.startMs);
 				const elapsedFraction = duration > 0 ? Math.min(1, elapsed / duration) : 0;
-
-				active.set(key, computeActiveLine(line, elapsedFraction, w, h));
+				active.set(line.index, computeActiveLine(line, elapsedFraction, w, h, scale));
 			}
 		}
 
 		for (const [key, al] of active) {
-			if (now > al.line.endMs) {
-				active.delete(key);
-				continue;
-			}
 			const duration = al.line.endMs - al.line.startMs;
 			const elapsed = Math.max(0, now - al.line.startMs);
 			const elapsedFraction = duration > 0 ? Math.min(1, elapsed / duration) : 0;
-			const updated = computeActiveLine(al.line, elapsedFraction, w, h);
+
+			if (al.line.positionType === 'move') {
+				if (now > al.line.endMs && elapsedFraction >= 1) {
+					active.delete(key);
+					continue;
+				}
+			} else {
+				if (now > al.line.endMs) {
+					active.delete(key);
+					continue;
+				}
+			}
+
+			const updated = computeActiveLine(al.line, elapsedFraction, w, h, scale);
 			al.elapsedFraction = updated.elapsedFraction;
+			al.fontSize = updated.fontSize;
+			al.transFontSize = updated.transFontSize;
 			al.left = updated.left;
 			al.top = updated.top;
 			al.transform = updated.transform;
@@ -77,7 +91,10 @@ export function createDanmakuRenderer(
 		rafId = requestAnimationFrame(tick);
 	}
 
-	function computeActiveLine(line: ParsedDanmakuLine, fraction: number, w: number, h: number): ActiveLine {
+	function computeActiveLine(line: ParsedDanmakuLine, fraction: number, w: number, h: number, scale: number): ActiveLine {
+		const origFs = Math.round(line.fontSize * scale);
+		const transFs = Math.round(line.translatedFontSize * scale);
+
 		if (line.positionType === 'move') {
 			const x1 = line.posX * w;
 			const y1 = line.posY * h;
@@ -89,10 +106,11 @@ export function createDanmakuRenderer(
 			return {
 				line,
 				elapsedFraction: fraction,
+				fontSize: `${origFs}px`,
+				transFontSize: `${transFs}px`,
 				left: `${x}px`,
 				top: `${y}px`,
 				transform: '',
-				anchorClass: '',
 			};
 		} else {
 			const anchor = ANCHOR_MAP[line.anchor] ?? ANCHOR_MAP[2];
@@ -102,10 +120,11 @@ export function createDanmakuRenderer(
 			return {
 				line,
 				elapsedFraction: fraction,
+				fontSize: `${origFs}px`,
+				transFontSize: `${transFs}px`,
 				left: `${x}px`,
 				top: `${y}px`,
 				transform: `translate(-${anchor.x}, -${anchor.y})`,
-				anchorClass: `anchor-${line.anchor}`,
 			};
 		}
 	}

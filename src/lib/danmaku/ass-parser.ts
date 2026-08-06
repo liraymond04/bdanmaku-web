@@ -1,4 +1,5 @@
 export interface ParsedDanmakuLine {
+	index: number;
 	layer: number;
 	startMs: number;
 	endMs: number;
@@ -118,6 +119,7 @@ export function parseAssContent(content: string, playResX: number, playResY: num
 		const color = cMatch ? cMatch[1] : '&H66FFFFFF';
 
 		lines.push({
+			index: lines.length,
 			layer,
 			startMs,
 			endMs,

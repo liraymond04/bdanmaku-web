@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageServerData } from './$types';
+	import { enhance } from '$app/forms';
 
 	let { data } = $props();
 	let editingVod = $state(false);
@@ -27,7 +28,7 @@
 	</div>
 
 	{#if editingVod}
-		<form method="POST" action="?/editVod" onsubmit={() => editingVod = false} class="rounded-lg border border-gray-700 bg-gray-800 p-4 space-y-3">
+		<form method="POST" action="?/editVod" use:enhance={() => { editingVod = false; }} class="rounded-lg border border-gray-700 bg-gray-800 p-4 space-y-3">
 			<h3 class="text-sm font-medium text-white">Edit VOD</h3>
 			<div class="grid grid-cols-2 gap-3">
 				<label class="block">

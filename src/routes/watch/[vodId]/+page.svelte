@@ -10,6 +10,7 @@
 
 	let parsedLines: ParsedDanmakuLine[] = $derived(
 		data.lines.map(l => ({
+			index: l.id,
 			layer: l.layer,
 			startMs: l.startMs,
 			endMs: l.endMs,
@@ -37,17 +38,15 @@
 
 		const tag = document.createElement('script');
 		tag.src = 'https://www.youtube.com/iframe_api';
-		const firstScriptTag = document.getElementsByTagName('script')[0];
-		firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+		const first = document.getElementsByTagName('script')[0];
+		first?.parentNode?.insertBefore(tag, first);
 
+		const prev = (window as any).onYouTubeIframeAPIReady;
 		(window as any).onYouTubeIframeAPIReady = () => {
+			if (prev) prev();
 			youtubePlayer = new (window as any).YT.Player('youtube-player', {
 				events: { onReady: () => {} },
 			});
-		};
-
-		return () => {
-			delete (window as any).onYouTubeIframeAPIReady;
 		};
 	});
 </script>
