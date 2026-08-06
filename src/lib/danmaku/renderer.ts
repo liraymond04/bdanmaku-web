@@ -13,18 +13,6 @@ export interface ActiveLine {
 	transform: string;
 }
 
-const ANCHOR_MAP: Record<number, { x: string; y: string }> = {
-	1: { x: '0%', y: '100%' },
-	2: { x: '50%', y: '100%' },
-	3: { x: '100%', y: '100%' },
-	4: { x: '0%', y: '50%' },
-	5: { x: '50%', y: '50%' },
-	6: { x: '100%', y: '50%' },
-	7: { x: '0%', y: '0%' },
-	8: { x: '50%', y: '0%' },
-	9: { x: '100%', y: '0%' },
-};
-
 export function createDanmakuRenderer(
 	lines: ParsedDanmakuLine[],
 	getCurrentTimeMs: () => number,
@@ -113,20 +101,17 @@ export function createDanmakuRenderer(
 				transform: '',
 			};
 		} else {
-			const anchor = ANCHOR_MAP[line.anchor] ?? ANCHOR_MAP[2];
-			const x = line.posX * w;
-			const y = line.posY * h;
-			const tx = anchor.x === '50%' ? '-50%' : anchor.x === '100%' ? '-100%' : '0';
-			const ty = anchor.y === '50%' ? '-50%' : anchor.y === '100%' ? '-100%' : '0';
+			const xpct = `${100 - line.posX * 100}%`;
+			const ypct = `${line.posY * 100}%`;
 
 			return {
 				line,
 				elapsedFraction: fraction,
 				fontSize: `${origFs}px`,
 				transFontSize: `${transFs}px`,
-				left: `${x}px`,
-				top: `${y}px`,
-				transform: `translate(${tx}, ${ty})`,
+				left: xpct,
+				top: ypct,
+				transform: '',
 			};
 		}
 	}

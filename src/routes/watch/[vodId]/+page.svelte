@@ -56,7 +56,7 @@
 <div class="space-y-4">
 	<h1 class="text-xl font-bold text-white">{data.vod.title}</h1>
 
-	<div class="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden">
+	<div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
 		<div
 			id="youtube-player"
 			class="absolute inset-0 w-full h-full"
