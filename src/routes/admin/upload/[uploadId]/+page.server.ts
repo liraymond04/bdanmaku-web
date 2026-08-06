@@ -39,22 +39,31 @@ export const actions = {
 		if (parsed.length === 0) return { error: 'No danmaku lines found in file' };
 
 		const now = new Date().toISOString();
-		let inserted = 0;
+
+		// Fetch all existing lines once, build lookup by (startMs, originalText)
+		const existingLines = await db
+			.select({ id: schema.danmakuLines.id, startMs: schema.danmakuLines.startMs, originalText: schema.danmakuLines.originalText })
+			.from(schema.danmakuLines)
+			.where(eq(schema.danmakuLines.uploadId, uploadId));
+
+		const existingMap = new Map<string, number>();
+		for (const el of existingLines) {
+			existingMap.set(`${el.startMs}|${el.originalText}`, el.id);
+		}
+
+		// Collect inserts (batch later) and updates
+		const toInsert: typeof schema.danmakuLines.$inferInsert[] = [];
 		let updated = 0;
 
 		for (const line of parsed) {
-			const existing = await db.query.danmakuLines.findFirst({
-				where: (fields) =>
-					eq(fields.uploadId, uploadId) &&
-					eq(fields.startMs, line.startMs) &&
-					eq(fields.originalText, line.originalText),
-			});
+			const key = `${line.startMs}|${line.originalText}`;
+			const existingId = existingMap.get(key);
 
-			if (existing) {
+			if (existingId !== undefined) {
 				await db
 					.update(schema.danmakuLines)
 					.set({
-						translatedText: line.translatedText || existing.translatedText,
+						translatedText: line.translatedText || undefined,
 						positionType: line.positionType,
 						posX: line.posX,
 						posY: line.posY,
@@ -67,10 +76,10 @@ export const actions = {
 						styleTags: line.styleTags,
 						updatedAt: now,
 					})
-					.where(eq(schema.danmakuLines.id, existing.id));
+					.where(eq(schema.danmakuLines.id, existingId));
 				updated++;
 			} else {
-				await db.insert(schema.danmakuLines).values({
+				toInsert.push({
 					uploadId,
 					layer: line.layer,
 					startMs: line.startMs,
@@ -90,8 +99,12 @@ export const actions = {
 					createdAt: now,
 					updatedAt: now,
 				});
-				inserted++;
 			}
+		}
+
+		// Batch insert all new lines in one query
+		if (toInsert.length > 0) {
+			await db.insert(schema.danmakuLines).values(toInsert);
 		}
 
 		await db
@@ -99,7 +112,7 @@ export const actions = {
 			.set({ status: 'ready', updatedAt: now })
 			.where(eq(schema.uploads.id, uploadId));
 
-		return { success: true, inserted, updated, total: parsed.length };
+		return { success: true, inserted: toInsert.length, updated, total: parsed.length };
 	},
 
 	setOffset: async ({ params, request }) => {

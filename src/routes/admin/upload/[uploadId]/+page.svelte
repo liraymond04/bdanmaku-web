@@ -2,6 +2,7 @@
 	import type { PageServerData, ActionData } from './$types';
 	import type { ParsedDanmakuLine } from '$lib/danmaku/ass-parser';
 	import DanmakuOverlay from '$lib/components/DanmakuOverlay.svelte';
+	import { enhance } from '$app/forms';
 
 	let { data, form } = $props();
 
@@ -10,6 +11,11 @@
 	let noteText = $state('');
 	let saving = $state(false);
 	let importing = $state(false);
+	let importStep = $state('');
+	let importCurrent = $state(0);
+	let importTotal = $state(0);
+	let importError = $state('');
+	let importResult = $state<{ inserted: number; updated: number; total: number } | null>(null);
 	let searchFilter = $state('');
 	let showUntranslated = $state(false);
 	let youtubePlayer: YT.Player | null = $state(null);
@@ -105,6 +111,46 @@
 				selectLine(line);
 			}, 250);
 		}
+	}
+
+	async function doImport(file: File) {
+		importing = true;
+		importError = '';
+		importResult = null;
+		importStep = 'uploading';
+		importCurrent = 0;
+		importTotal = 0;
+
+		const fd = new FormData();
+		fd.append('file', file);
+
+		const res = await fetch(`/api/upload/${data.upload.id}/import-stream`, { method: 'POST', body: fd });
+		const reader = res.body?.getReader();
+		if (!reader) { importError = 'No response'; importing = false; return; }
+
+		const decoder = new TextDecoder();
+		let buf = '';
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			buf += decoder.decode(value, { stream: true });
+
+			const lines = buf.split('\n');
+			buf = lines.pop() || '';
+
+			for (const line of lines) {
+				if (!line.trim()) continue;
+				try {
+					const evt = JSON.parse(line);
+					importStep = evt.step;
+					if (evt.step === 'importing') { importCurrent = evt.current; importTotal = evt.total; }
+					if (evt.step === 'done') { importResult = evt; importing = false; if (data.lines.length === 0) window.location.reload(); }
+					if (evt.step === 'error') { importError = evt.message; importing = false; }
+				} catch {}
+			}
+		}
+		if (importing) importing = false;
 	}
 
 	function formatMs(ms: number): string {
@@ -212,47 +258,48 @@
 				Export a translated ASS file from mpv (Ctrl+E), then import it here to populate danmaku lines.
 			</p>
 
-			{#if form?.error}
-				<p class="text-sm text-red-400">{form.error}</p>
+			{#if importError}
+				<p class="text-sm text-red-400">{importError}</p>
 			{/if}
-			{#if form?.success}
-				<div class="text-sm text-green-400">
-					<p>{form.inserted} new lines imported, {form.updated} updated out of {form.total} total.</p>
-					<div class="mt-2 w-full bg-gray-700 rounded-full h-2">
-						<div class="bg-green-500 h-2 rounded-full" style="width: 100%;"></div>
+			{#if importResult}
+				<div class="text-sm text-green-400 space-y-2">
+					<p class="font-medium">Import complete — {importResult.inserted} new, {importResult.updated} updated, {importResult.total} total</p>
+					<div class="w-full bg-gray-700 rounded-full h-2.5">
+						<div class="bg-green-500 h-2.5 rounded-full" style="width: 100%;"></div>
 					</div>
-					<a href="." class="underline mt-2 inline-block">Reload to view</a>
 				</div>
 			{/if}
 
-			<form
-				method="POST"
-				action="?/importAss"
-				enctype="multipart/form-data"
-				class="flex items-center justify-center gap-2"
-				onsubmit={() => importing = true}
-			>
-				<input
-					type="file"
-					name="file"
-					accept=".ass"
-					required
-					disabled={importing}
-					class="text-sm text-gray-400 file:mr-2 file:rounded file:bg-gray-700 file:border-0 file:px-3 file:py-1.5 file:text-sm file:text-white"
-				/>
-				<button
-					type="submit"
-					disabled={importing}
-					class="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-				>
-					{#if importing}
-						<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1 align-middle"></span>
-						Importing...
-					{:else}
-						Import ASS
+			{#if importing}
+				<div class="text-sm text-blue-400 space-y-2">
+					<div class="flex items-center justify-center gap-2">
+						<span class="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+						{importStep === 'uploading' ? 'Uploading file...' :
+						 importStep === 'parse' ? 'Parsing ASS...' :
+						 importStep === 'checking' ? 'Checking existing lines...' :
+						 importStep === 'importing' ? `Importing ${importCurrent} / ${importTotal}` :
+						 importStep === 'saving' ? 'Saving to database...' :
+						 'Processing...'}
+					</div>
+					{#if importTotal > 0}
+						<div class="w-full bg-gray-700 rounded-full h-2.5">
+							<div class="bg-blue-400 h-2.5 rounded-full transition-all" style="width: {Math.round((importCurrent / importTotal) * 100)}%;"></div>
+						</div>
 					{/if}
-				</button>
-			</form>
+				</div>
+			{:else}
+				<div class="flex items-center justify-center gap-2">
+					<input
+						type="file"
+						accept=".ass"
+						onchange={(e) => {
+							const f = (e.target as HTMLInputElement).files?.[0];
+							if (f) doImport(f);
+						}}
+						class="text-sm text-gray-400 file:mr-2 file:rounded file:bg-gray-700 file:border-0 file:px-3 file:py-1.5 file:text-sm file:text-white file:cursor-pointer"
+					/>
+				</div>
+			{/if}
 		</div>
 	{:else}
 		<div class="flex gap-4" style="height: calc(100vh - 180px);">
@@ -273,22 +320,32 @@
 					/>
 				</div>
 
-				<form method="POST" action="?/importAss" enctype="multipart/form-data" class="flex items-center gap-2" onsubmit={() => importing = true}>
+				<div class="flex items-center gap-2">
+					{#if importing}
+						<div class="text-xs text-blue-400 flex items-center gap-1">
+							<span class="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+							{importStep === 'importing' ? `${importCurrent}/${importTotal}` : importStep}
+						</div>
+						{#if importTotal > 0}
+							<div class="flex-1 bg-gray-700 rounded-full h-1.5 max-w-32">
+								<div class="bg-blue-400 h-1.5 rounded-full transition-all" style="width: {Math.round((importCurrent / importTotal) * 100)}%;"></div>
+							</div>
+						{/if}
+					{:else if importResult}
+						<span class="text-xs text-green-400">{importResult.inserted} new, {importResult.updated} updated</span>
+					{:else if importError}
+						<span class="text-xs text-red-400">{importError}</span>
+					{/if}
 					<input
 						type="file"
-						name="file"
 						accept=".ass"
-						disabled={importing}
-						class="text-xs text-gray-400 file:mr-2 file:rounded file:bg-gray-700 file:border-0 file:px-2 file:py-1 file:text-xs file:text-white"
+						onchange={(e) => {
+							const f = (e.target as HTMLInputElement).files?.[0];
+							if (f) doImport(f);
+						}}
+						class="text-xs text-gray-400 file:mr-2 file:rounded file:bg-gray-700 file:border-0 file:px-2 file:py-1 file:text-xs file:text-white file:cursor-pointer"
 					/>
-					<button type="submit" disabled={importing} class="cursor-pointer rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50">
-						{#if importing}
-							Importing...
-						{:else}
-							Re-import ASS
-						{/if}
-					</button>
-				</form>
+				</div>
 			</div>
 
 			<div class="w-1/2 flex flex-col space-y-2 overflow-hidden">

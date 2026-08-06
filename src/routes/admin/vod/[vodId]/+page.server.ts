@@ -87,6 +87,7 @@ export const actions = {
 	deleteUpload: async ({ request }) => {
 		const data = await request.formData();
 		const uploadId = parseInt(String(data.get('uploadId') || '0'));
+		await db.delete(schema.danmakuLines).where(eq(schema.danmakuLines.uploadId, uploadId));
 		await db.delete(schema.uploads).where(eq(schema.uploads.id, uploadId));
 	},
 } satisfies Actions;
