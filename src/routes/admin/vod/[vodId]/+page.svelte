@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Manage: {data.vod.title} — Admin</title>
+	<title>Manage: {data.vod.title} - bdanmaku-web</title>
 </svelte:head>
 
 <div class="space-y-6">

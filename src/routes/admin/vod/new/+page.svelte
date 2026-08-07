@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Add VOD — Admin</title>
+	<title>Add VOD - bdanmaku-web</title>
 </svelte:head>
 
 <div class="max-w-lg">

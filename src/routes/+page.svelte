@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>bdanmaku — Library</title>
+	<title>Library - bdanmaku-web</title>
 </svelte:head>
 
 <h1 class="text-2xl font-bold text-white mb-6">VOD Library</h1>

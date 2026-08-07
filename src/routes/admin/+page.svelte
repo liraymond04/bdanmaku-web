@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Admin Dashboard — bdanmaku</title>
+	<title>Admin Dashboard - bdanmaku-web</title>
 </svelte:head>
 
 <h1 class="text-2xl font-bold text-white mb-6">Admin Dashboard</h1>

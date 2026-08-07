@@ -197,7 +197,7 @@
 </script>
 
 <svelte:head>
-	<title>Edit: {data.vod.title} — Admin</title>
+	<title>Edit: {data.vod.title} - bdanmaku-web</title>
 </svelte:head>
 
 <div class="space-y-4">

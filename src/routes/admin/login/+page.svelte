@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Admin Login — bdanmaku</title>
+	<title>Admin Login - bdanmaku-web</title>
 </svelte:head>
 
 <div class="flex min-h-[60vh] items-center justify-center">

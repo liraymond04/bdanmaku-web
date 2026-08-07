@@ -51,7 +51,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.vod.title} — bdanmaku</title>
+	<title>{data.vod.title} - bdanmaku-web</title>
 </svelte:head>
 
 <div class="space-y-4">
