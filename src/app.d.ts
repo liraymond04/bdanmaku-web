@@ -16,3 +16,16 @@ declare namespace YT {
 		onReady?: () => void;
 	}
 }
+
+declare global {
+	interface Window {
+		dataLayer: unknown[];
+		gtag?: (
+			command: 'js' | 'config' | 'event',
+			target: string | Date,
+			parameters?: Record<string, unknown>
+		) => void;
+	}
+}
+
+export {};

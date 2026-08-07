@@ -30,6 +30,15 @@
 	);
 
 	$effect(() => {
+		if ((window as any).YT?.Player) {
+			const player = new (window as any).YT.Player('youtube-player', {
+				videoId: data.vod.youtubeId,
+				playerVars: { origin: window.location.origin },
+				events: { onReady: () => { youtubePlayer = player; } },
+			});
+			return () => { player.destroy(); youtubePlayer = null; };
+		}
+
 		const tag = document.createElement('script');
 		tag.src = 'https://www.youtube.com/iframe_api';
 		document.head.appendChild(tag);
@@ -38,15 +47,14 @@
 			const player = new (window as any).YT.Player('youtube-player', {
 				videoId: data.vod.youtubeId,
 				playerVars: { origin: window.location.origin },
-				events: {
-					onReady: () => { youtubePlayer = player; },
-				},
+				events: { onReady: () => { youtubePlayer = player; } },
 			});
 		};
 
 		return () => {
 			delete (window as any).onYouTubeIframeAPIReady;
 			if (youtubePlayer) youtubePlayer.destroy();
+			youtubePlayer = null;
 		};
 	});
 </script>

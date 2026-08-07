@@ -14,7 +14,8 @@
 	function show(raw: string, cx: number, cy: number, isBelow: boolean) {
 		if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
 		noteText = raw;
-		x = cx;
+		const clampedX = Math.max(250, Math.min(cx, window.innerWidth - 180));
+		x = clampedX;
 		y = cy;
 		below = isBelow;
 		maxH = isBelow ? (window.innerHeight - cy - 16) : (cy - 16);
@@ -63,7 +64,7 @@
 	<div
 		role="tooltip"
 		style="position:fixed;left:{x}px;top:{y}px;transform:translate(-50%,{below ? '0' : '-100%'});max-height:{maxH}px;overflow-y:auto;"
-		class="note-popover z-9999 pointer-events-auto bg-[rgba(15,15,25,0.95)] border border-white/15 rounded-lg px-3 py-2 text-sm leading-relaxed text-[#e0e0e0] whitespace-normal shadow-lg"
+		class="note-popover z-9999 pointer-events-auto bg-[rgba(15,15,25,0.95)] border border-white/15 rounded-lg px-3 py-2 text-sm leading-relaxed text-[#e0e0e0] whitespace-normal shadow-lg max-w-120"
 		onmouseenter={onPopEnter}
 		onmouseleave={onPopLeave}
 	>
