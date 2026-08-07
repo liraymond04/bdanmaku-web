@@ -13,6 +13,7 @@
 			<a href="/" class="hover:text-white transition">Library</a>
 			{#if page.data.isAdmin}
 				<a href="/admin" class="hover:text-white transition">Dashboard</a>
+				<a href="/admin/settings" class="hover:text-white transition">Settings</a>
 				<a href="/admin/logout" class="hover:text-white transition">Logout</a>
 			{/if}
 		</div>
