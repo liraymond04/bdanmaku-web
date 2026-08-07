@@ -183,6 +183,7 @@
 		(window as any).onYouTubeIframeAPIReady = () => {
 			const player = new (window as any).YT.Player('youtube-player-admin', {
 				videoId: data.vod.youtubeId,
+				playerVars: { origin: window.location.origin },
 				events: {
 					onReady: () => { youtubePlayer = player; },
 				},
