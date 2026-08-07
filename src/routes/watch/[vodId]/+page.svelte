@@ -15,6 +15,7 @@
 			endMs: l.endMs,
 			originalText: l.originalText,
 			translatedText: l.editedText ?? l.translatedText ?? '',
+			note: l.noteMarkdown ?? l.note,
 			positionType: l.positionType as 'move' | 'pos',
 			posX: l.posX ?? 0,
 			posY: l.posY ?? 0,

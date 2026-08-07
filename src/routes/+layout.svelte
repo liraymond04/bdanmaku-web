@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import NotePopover from '$lib/components/NotePopover.svelte';
 	import '../app.css';
 
 	let { children } = $props();
@@ -21,3 +22,5 @@
 <main class="mx-auto max-w-6xl px-4 py-6">
 	{@render children()}
 </main>
+
+<NotePopover />

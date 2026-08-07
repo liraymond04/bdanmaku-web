@@ -46,7 +46,7 @@
 </script>
 
 {#if youtubePlayer}
-	<div bind:this={containerEl} class="absolute inset-0 overflow-hidden pointer-events-none">
+	<div bind:this={containerEl} class="absolute inset-0 overflow-hidden pointer-events-none z-10">
 		{#each activeLines as al (al.line.index)}
 			<DanmakuLine {al} {adminMode} {onselect} {onjump} />
 		{/each}

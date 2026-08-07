@@ -5,6 +5,7 @@ export interface ParsedDanmakuLine {
 	endMs: number;
 	originalText: string;
 	translatedText: string;
+	note?: string | null;
 	positionType: 'move' | 'pos';
 	posX: number;
 	posY: number;

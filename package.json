@@ -28,6 +28,7 @@
 	"dependencies": {
 		"@libsql/client": "^0.17.4",
 		"bcryptjs": "^3.0.3",
-		"drizzle-orm": "^0.45.2"
+		"drizzle-orm": "^0.45.2",
+		"svelte-markdown": "^0.4.1"
 	}
 }

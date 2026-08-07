@@ -3,6 +3,8 @@
 	import type { ParsedDanmakuLine } from '$lib/danmaku/ass-parser';
 	import DanmakuOverlay from '$lib/components/DanmakuOverlay.svelte';
 	import { enhance } from '$app/forms';
+	import SvelteMarkdown from 'svelte-markdown';
+	import { markdownRenderers } from '$lib/markdown/renderers';
 
 	let { data, form } = $props();
 
@@ -32,13 +34,16 @@
 
 
 	const parsedLines: ParsedDanmakuLine[] = $derived(
-		data.lines.map(l => ({
+		data.lines.map(l => {
+			const ov = lineOverrides.get(l.id);
+			return {
 			index: l.id,
 			layer: l.layer,
 			startMs: l.startMs,
 			endMs: l.endMs,
 			originalText: l.originalText,
-			translatedText: l.editedText ?? l.translatedText ?? '',
+			translatedText: ov?.editedText ?? l.editedText ?? l.translatedText ?? '',
+			note: ov?.note ?? l.noteMarkdown ?? l.note,
 			positionType: l.positionType as 'move' | 'pos',
 			posX: l.posX ?? 0,
 			posY: l.posY ?? 0,
@@ -49,7 +54,7 @@
 			translatedFontSize: l.translatedFontSize ?? 29,
 			color: l.color ?? '&H66FFFFFF',
 			styleTags: l.styleTags ?? '',
-		}))
+		}})
 	);
 
 	const filteredLines = $derived(
@@ -70,9 +75,10 @@
 
 	function selectLine(line: ParsedDanmakuLine) {
 		selectedLineId = line.index;
+		const ov = lineOverrides.get(line.index);
 		const dbLine = data.lines.find(l => l.startMs === line.startMs && l.originalText === line.originalText);
-		editedText = dbLine?.editedText ?? dbLine?.translatedText ?? '';
-		noteText = dbLine?.noteMarkdown ?? dbLine?.note ?? '';
+		editedText = ov?.editedText ?? dbLine?.editedText ?? dbLine?.translatedText ?? '';
+		noteText = ov?.note ?? dbLine?.noteMarkdown ?? dbLine?.note ?? '';
 	}
 
 	function handleOverlaySelect(line: ParsedDanmakuLine) {
@@ -95,11 +101,18 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ editedText: editedText, note: noteText, noteMarkdown: noteText }),
 		});
+		dbLine.editedText = editedText || null;
+		dbLine.note = noteText || null;
+		dbLine.noteMarkdown = noteText || null;
+		lineOverrides = new Map(lineOverrides.set(dbLine.id, { editedText: editedText || undefined, note: noteText || undefined }));
 		saving = false;
 	}
 
 	let notePreview = $state(false);
 	let clickTimer: ReturnType<typeof setTimeout> | null = $state(null);
+	let lineOverrides = $state(new Map<number, { editedText?: string; note?: string }>());
+
+
 
 	function handleLineClick(line: ParsedDanmakuLine) {
 		if (clickTimer) {
@@ -394,9 +407,9 @@
 								</button>
 							</div>
 							{#if notePreview}
-								<div class="rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-xs text-gray-300 min-h-[3rem] prose prose-invert prose-xs max-w-none">
+								<div class="rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-xs text-gray-300 min-h-12 max-w-none">
 									{#if noteText}
-										{@html noteText.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/`(.+?)`/g, '<code class="bg-gray-600 px-1 rounded text-xs">$1</code>').replace(/\n/g, '<br>')}
+										<SvelteMarkdown source={noteText} renderers={markdownRenderers as any} options={{ breaks: true, gfm: true }} />
 									{:else}
 										<span class="text-gray-500 italic">Nothing to preview</span>
 									{/if}
