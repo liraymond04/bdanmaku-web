@@ -3,7 +3,7 @@
 	import type { ParsedDanmakuLine } from '$lib/danmaku/ass-parser';
 	import DanmakuOverlay from '$lib/components/DanmakuOverlay.svelte';
 	import { enhance } from '$app/forms';
-	import SvelteMarkdown from 'svelte-markdown';
+	import SvelteMarkdown from '@humanspeak/svelte-markdown';
 	import { markdownRenderers } from '$lib/markdown/renderers';
 
 	let { data, form } = $props();
@@ -409,7 +409,7 @@
 							{#if notePreview}
 								<div class="rounded bg-gray-700 border border-gray-600 px-3 py-1.5 text-xs text-gray-300 min-h-12 max-w-none">
 									{#if noteText}
-										<SvelteMarkdown source={noteText} renderers={markdownRenderers as any} options={{ breaks: true, gfm: true }} />
+										<SvelteMarkdown source={noteText} renderers={markdownRenderers as any} />
 									{:else}
 										<span class="text-gray-500 italic">Nothing to preview</span>
 									{/if}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SvelteMarkdown from 'svelte-markdown';
+	import SvelteMarkdown from '@humanspeak/svelte-markdown';
 	import { markdownRenderers } from '$lib/markdown/renderers';
 
 	let visible = $state(false);
@@ -67,7 +67,7 @@
 		onmouseenter={onPopEnter}
 		onmouseleave={onPopLeave}
 	>
-		<SvelteMarkdown source={noteText} renderers={markdownRenderers as any} options={{ breaks: true, gfm: true }} />
+		<SvelteMarkdown source={noteText} renderers={markdownRenderers as any} />
 	</div>
 {/if}
 
