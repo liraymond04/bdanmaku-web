@@ -1,10 +1,34 @@
 <script lang="ts">
 	import { page, navigating } from '$app/state';
+	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
 	import NotePopover from '$lib/components/NotePopover.svelte';
 	import '../app.css';
 
 	let { children } = $props();
+
+	onMount(() => {
+		(window as any).dataLayer = (window as any).dataLayer || [];
+		(window as any).gtag = function gtag(...args: unknown[]) {
+			(window as any).dataLayer.push(args);
+		};
+		(window as any).gtag('js', new Date());
+	});
+
+	$effect(() => {
+		if (browser) {
+			page.url.pathname;
+			(window as any).gtag?.('config', 'G-9RZ0WKK781', {
+				page_title: document.title,
+				page_path: page.url.pathname,
+			});
+		}
+	});
 </script>
+
+<svelte:head>
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-9RZ0WKK781"></script>
+</svelte:head>
 
 <nav class="border-b border-gray-700 bg-gray-900">
 	<div class="mx-auto max-w-6xl px-4 py-3 flex items-center gap-6">
