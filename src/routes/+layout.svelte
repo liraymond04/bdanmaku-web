@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { page, navigating } from '$app/state';
 	import NotePopover from '$lib/components/NotePopover.svelte';
 	import '../app.css';
 
@@ -18,6 +18,10 @@
 		</div>
 	</div>
 </nav>
+
+{#if navigating.to}
+	<div class="fixed top-0 left-0 right-0 z-50 h-0.5 bg-blue-500 animate-pulse"></div>
+{/if}
 
 <main class="mx-auto max-w-6xl px-4 py-6">
 	{@render children()}
