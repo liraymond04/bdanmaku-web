@@ -7,6 +7,8 @@ export const vods = sqliteTable('vods', {
 	youtubeId: text('youtube_id').notNull(),
 	description: text('description'),
 	thumbnailUrl: text('thumbnail_url'),
+	visible: integer('visible').notNull().default(1),
+	sortOrder: integer('sort_order').notNull().default(0),
 	createdAt: text('created_at').notNull(),
 	updatedAt: text('updated_at').notNull(),
 });

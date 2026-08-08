@@ -2,6 +2,7 @@
 	import { page, navigating } from '$app/state';
 	import NotePopover from '$lib/components/NotePopover.svelte';
 	import GoogleAnalytics from '$lib/components/GoogleAnalytics.svelte';
+	import { submitting } from '$lib/stores';
 	import '../app.css';
 
 	let { children } = $props();
@@ -23,7 +24,7 @@
 	</div>
 </nav>
 
-{#if navigating.to}
+{#if navigating.to || $submitting}
 	<div class="fixed top-0 left-0 right-0 z-50 h-0.5 bg-blue-500 animate-pulse"></div>
 {/if}
 

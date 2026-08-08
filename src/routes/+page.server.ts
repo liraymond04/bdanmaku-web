@@ -1,5 +1,5 @@
 import db, { schema } from '$lib/server/db';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -13,8 +13,9 @@ export const load: PageServerLoad = async () => {
 		})
 		.from(schema.vods)
 		.leftJoin(schema.uploads, sql`${schema.vods.id} = ${schema.uploads.vodId}`)
+		.where(eq(schema.vods.visible, 1))
 		.groupBy(schema.vods.id)
-		.orderBy(sql`${schema.vods.createdAt} DESC`);
+		.orderBy(schema.vods.sortOrder, sql`${schema.vods.createdAt} DESC`);
 
 	return { vods };
 };
